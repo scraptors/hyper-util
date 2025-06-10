@@ -1,0 +1,93 @@
+   0.112845877s  INFO prepare_target{force=false package_id=hyper-util v0.1.17 (/home/sean/code/hyper-util) target="legacy_client"}: cargo::core::compiler::fingerprint: fingerprint error for hyper-util v0.1.17 (/home/sean/code/hyper-util)/Check { test: true }/TargetInner { kind: "test", name: "legacy_client", benched: false, ..: with_path("/home/sean/code/hyper-util/tests/legacy_client.rs", Edition2021) }
+   0.113026998s  INFO prepare_target{force=false package_id=hyper-util v0.1.17 (/home/sean/code/hyper-util) target="legacy_client"}: cargo::core::compiler::fingerprint:     err: failed to read `/home/sean/code/hyper-util/target/debug/.fingerprint/hyper-util-8c5eca22e264ab85/test-integration-test-legacy_client`
+
+Caused by:
+    No such file or directory (os error 2)
+
+Stack backtrace:
+   0: cargo_util::paths::read_bytes
+   1: cargo_util::paths::read
+   2: cargo::core::compiler::fingerprint::_compare_old_fingerprint
+   3: cargo::core::compiler::fingerprint::prepare_target
+   4: cargo::core::compiler::compile
+   5: <cargo::core::compiler::build_runner::BuildRunner>::compile
+   6: cargo::ops::cargo_compile::compile_ws
+   7: cargo::ops::cargo_compile::compile_with_exec
+   8: cargo::ops::cargo_compile::compile
+   9: cargo::commands::check::exec
+  10: <cargo::cli::Exec>::exec
+  11: cargo::main
+  12: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
+  13: std::rt::lang_start::<()>::{closure#0}
+  14: core::ops::function::impls::<impl core::ops::function::FnOnce<A> for &F>::call_once
+             at /rustc/adaa838976ff99a4f0661136322f64cb466b58a0/library/core/src/ops/function.rs:287:21
+  15: std::panicking::catch_unwind::do_call
+             at /rustc/adaa838976ff99a4f0661136322f64cb466b58a0/library/std/src/panicking.rs:590:40
+  16: std::panicking::catch_unwind
+             at /rustc/adaa838976ff99a4f0661136322f64cb466b58a0/library/std/src/panicking.rs:553:19
+  17: std::panic::catch_unwind
+             at /rustc/adaa838976ff99a4f0661136322f64cb466b58a0/library/std/src/panic.rs:359:14
+  18: std::rt::lang_start_internal::{{closure}}
+             at /rustc/adaa838976ff99a4f0661136322f64cb466b58a0/library/std/src/rt.rs:175:24
+  19: std::panicking::catch_unwind::do_call
+             at /rustc/adaa838976ff99a4f0661136322f64cb466b58a0/library/std/src/panicking.rs:590:40
+  20: std::panicking::catch_unwind
+             at /rustc/adaa838976ff99a4f0661136322f64cb466b58a0/library/std/src/panicking.rs:553:19
+  21: std::panic::catch_unwind
+             at /rustc/adaa838976ff99a4f0661136322f64cb466b58a0/library/std/src/panic.rs:359:14
+  22: std::rt::lang_start_internal
+             at /rustc/adaa838976ff99a4f0661136322f64cb466b58a0/library/std/src/rt.rs:171:5
+  23: main
+  24: __libc_start_call_main
+             at ./csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+  25: __libc_start_main_impl
+             at ./csu/../csu/libc-start.c:360:3
+  26: <unknown>
+   0.213487562s  INFO prepare_target{force=false package_id=hyper-util v0.1.17 (/home/sean/code/hyper-util) target="proxy"}: cargo::core::compiler::fingerprint: fingerprint error for hyper-util v0.1.17 (/home/sean/code/hyper-util)/Check { test: true }/TargetInner { kind: "test", name: "proxy", benched: false, ..: with_path("/home/sean/code/hyper-util/tests/proxy.rs", Edition2021) }
+   0.213581563s  INFO prepare_target{force=false package_id=hyper-util v0.1.17 (/home/sean/code/hyper-util) target="proxy"}: cargo::core::compiler::fingerprint:     err: failed to read `/home/sean/code/hyper-util/target/debug/.fingerprint/hyper-util-c6bd5b6aa0f73e77/test-integration-test-proxy`
+
+Caused by:
+    No such file or directory (os error 2)
+
+Stack backtrace:
+   0: cargo_util::paths::read_bytes
+   1: cargo_util::paths::read
+   2: cargo::core::compiler::fingerprint::_compare_old_fingerprint
+   3: cargo::core::compiler::fingerprint::prepare_target
+   4: cargo::core::compiler::compile
+   5: <cargo::core::compiler::build_runner::BuildRunner>::compile
+   6: cargo::ops::cargo_compile::compile_ws
+   7: cargo::ops::cargo_compile::compile_with_exec
+   8: cargo::ops::cargo_compile::compile
+   9: cargo::commands::check::exec
+  10: <cargo::cli::Exec>::exec
+  11: cargo::main
+  12: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
+  13: std::rt::lang_start::<()>::{closure#0}
+  14: core::ops::function::impls::<impl core::ops::function::FnOnce<A> for &F>::call_once
+             at /rustc/adaa838976ff99a4f0661136322f64cb466b58a0/library/core/src/ops/function.rs:287:21
+  15: std::panicking::catch_unwind::do_call
+             at /rustc/adaa838976ff99a4f0661136322f64cb466b58a0/library/std/src/panicking.rs:590:40
+  16: std::panicking::catch_unwind
+             at /rustc/adaa838976ff99a4f0661136322f64cb466b58a0/library/std/src/panicking.rs:553:19
+  17: std::panic::catch_unwind
+             at /rustc/adaa838976ff99a4f0661136322f64cb466b58a0/library/std/src/panic.rs:359:14
+  18: std::rt::lang_start_internal::{{closure}}
+             at /rustc/adaa838976ff99a4f0661136322f64cb466b58a0/library/std/src/rt.rs:175:24
+  19: std::panicking::catch_unwind::do_call
+             at /rustc/adaa838976ff99a4f0661136322f64cb466b58a0/library/std/src/panicking.rs:590:40
+  20: std::panicking::catch_unwind
+             at /rustc/adaa838976ff99a4f0661136322f64cb466b58a0/library/std/src/panicking.rs:553:19
+  21: std::panic::catch_unwind
+             at /rustc/adaa838976ff99a4f0661136322f64cb466b58a0/library/std/src/panic.rs:359:14
+  22: std::rt::lang_start_internal
+             at /rustc/adaa838976ff99a4f0661136322f64cb466b58a0/library/std/src/rt.rs:171:5
+  23: main
+  24: __libc_start_call_main
+             at ./csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+  25: __libc_start_main_impl
+             at ./csu/../csu/libc-start.c:360:3
+  26: <unknown>
+    Checking hyper-util v0.1.17 (/home/sean/code/hyper-util)
+error: could not compile `hyper-util` (test "legacy_client") due to 29 previous errors
+error: could not compile `hyper-util` (test "proxy") due to 85 previous errors
