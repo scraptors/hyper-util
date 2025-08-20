@@ -1508,6 +1508,20 @@ impl Builder {
         self
     }
 
+    /// Sets the header table size.
+    ///
+    /// This setting informs the peer of the maximum size of the header compression
+    /// table used to encode header blocks, in octets. The encoder may select any value
+    /// equal to or less than the header table size specified by the sender.
+    ///
+    /// The default value of crate `h2` is 4,096.
+    #[cfg(feature = "http2")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "http2")))]
+    pub fn http2_header_table_size(&mut self, size: impl Into<Option<u32>>) -> &mut Self {
+        self.h2_builder.header_table_size(size);
+        self
+    }
+
     /// Sets the initial stream id for the connection.
     ///
     /// The default value is determined by the `h2` crate.
