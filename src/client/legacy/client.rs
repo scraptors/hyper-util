@@ -1105,15 +1105,6 @@ impl Builder {
     }
 
     // HTTP/1 options
-
-    /// Sets the http1 builder instance directly
-    #[cfg(feature = "http1")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "http1")))]
-    pub fn http1_builder(&mut self, builder: hyper::client::conn::http1::Builder) -> &mut Self {
-        self.h1_builder = builder;
-        self
-    }
-
     /// Sets the exact size of the read buffer to *always* use.
     ///
     /// Note that setting this option unsets the `http1_max_buf_size` option.
@@ -1323,17 +1314,6 @@ impl Builder {
     #[cfg_attr(docsrs, doc(cfg(feature = "http1")))]
     pub fn http09_responses(&mut self, val: bool) -> &mut Self {
         self.h1_builder.http09_responses(val);
-        self
-    }
-
-    /// Sets the http2 builder instance directly
-    #[cfg(feature = "http2")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "http2")))]
-    pub fn http2_builder(
-        &mut self,
-        builder: hyper::client::conn::http2::Builder<Exec>,
-    ) -> &mut Self {
-        self.h2_builder = builder;
         self
     }
 
