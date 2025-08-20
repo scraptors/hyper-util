@@ -25,7 +25,7 @@ futures-core = { version = "0.3" }
 futures-util = { version = "0.3.16", default-features = false, optional = true }
 http = "1.0"
 http-body = "1.0.0"
-hyper = { git = "https://github.com/scraptors/hyper", rev = "892332bd58c05ae549a97147ebb46d78ae6e1abf" }
+hyper = { git = "https://github.com/scraptors/hyper", rev = "c0f5afc323a932bf0677d740c9cd8a10417caf34" }
 ipnet = { version = "2.9", optional = true }
 libc = { version = "0.2", optional = true }
 percent-encoding = { version = "2.3", optional = true }
@@ -36,7 +36,7 @@ tokio = { version = "1", optional = true, default-features = false  }
 tower-service = { version = "0.3", optional = true }
 
 [dev-dependencies]
-hyper = { git = "https://github.com/scraptors/hyper", rev = "892332bd58c05ae549a97147ebb46d78ae6e1abf", features = ["full"] }
+hyper = { git = "https://github.com/scraptors/hyper", rev = "c0f5afc323a932bf0677d740c9cd8a10417caf34", features = ["full"] }
 bytes = "1"
 futures-util = { version = "0.3.16", default-features = false, features = ["alloc"] }
 http-body-util = "0.1.0"

@@ -17,6 +17,8 @@ use hyper::client::conn::TrySendError as ConnTrySendError;
 use hyper::header::{HeaderValue, HOST};
 use hyper::rt::Timer;
 use hyper::{body::Body, Method, Request, Response, Uri, Version};
+#[cfg(feature = "http2")]
+use hyper::{Priorities, PseudoOrder, SettingsOrder, StreamDependency};
 use tracing::{debug, trace, warn};
 
 use super::connect::capture::CaptureConnectionExtension;
@@ -1104,6 +1106,14 @@ impl Builder {
 
     // HTTP/1 options
 
+    /// Sets the http1 builder instance directly
+    #[cfg(feature = "http1")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "http1")))]
+    pub fn http1_builder(&mut self, builder: hyper::client::conn::http1::Builder) -> &mut Self {
+        self.h1_builder = builder;
+        self
+    }
+
     /// Sets the exact size of the read buffer to *always* use.
     ///
     /// Note that setting this option unsets the `http1_max_buf_size` option.
@@ -1316,6 +1326,17 @@ impl Builder {
         self
     }
 
+    /// Sets the http2 builder instance directly
+    #[cfg(feature = "http2")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "http2")))]
+    pub fn http2_builder(
+        &mut self,
+        builder: hyper::client::conn::http2::Builder<Exec>,
+    ) -> &mut Self {
+        self.h2_builder = builder;
+        self
+    }
+
     /// Set whether the connection **must** use HTTP/2.
     ///
     /// The destination must either allow HTTP2 Prior Knowledge, or the
@@ -1504,6 +1525,81 @@ impl Builder {
     #[cfg_attr(docsrs, doc(cfg(feature = "http2")))]
     pub fn http2_max_concurrent_reset_streams(&mut self, max: usize) -> &mut Self {
         self.h2_builder.max_concurrent_reset_streams(max);
+        self
+    }
+
+    /// Sets the initial stream id for the connection.
+    ///
+    /// The default value is determined by the `h2` crate.
+    #[cfg(feature = "http2")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "http2")))]
+    pub fn http2_initial_stream_id(&mut self, id: impl Into<Option<u32>>) -> &mut Self {
+        self.h2_builder.initial_stream_id(id);
+        self
+    }
+
+    /// Enables or disables server push promises.
+    ///
+    /// The default value is determined by the `h2` crate.
+    #[cfg(feature = "http2")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "http2")))]
+    pub fn http2_enable_push(&mut self, opt: bool) -> &mut Self {
+        self.h2_builder.enable_push(opt);
+        self
+    }
+
+    /// Enables the [extended CONNECT protocol].
+    ///
+    /// The default value is determined by the `h2` crate.
+    ///
+    /// [extended CONNECT protocol]: https://datatracker.ietf.org/doc/html/rfc8441#section-4
+    #[cfg(feature = "http2")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "http2")))]
+    pub fn http2_enable_connect_protocol(&mut self, opt: bool) -> &mut Self {
+        self.h2_builder.enable_connect_protocol(opt);
+        self
+    }
+
+    /// HTTP/2 headers priority
+    ///
+    /// The default value is determined by the `h2` crate.
+    #[cfg(feature = "http2")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "http2")))]
+    pub fn http2_headers_stream_dependency(
+        &mut self,
+        stream_dependency: Option<StreamDependency>,
+    ) -> &mut Self {
+        self.h2_builder.headers_stream_dependency(stream_dependency);
+        self
+    }
+
+    /// HTTP/2 headers pseudo header order
+    ///
+    /// The default value is determined by the `h2` crate.
+    #[cfg(feature = "http2")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "http2")))]
+    pub fn http2_headers_pseudo_order(&mut self, order: Option<PseudoOrder>) -> &mut Self {
+        self.h2_builder.headers_pseudo_order(order);
+        self
+    }
+
+    /// HTTP/2 settings order
+    ///
+    /// The default value is determined by the `h2` crate.
+    #[cfg(feature = "http2")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "http2")))]
+    pub fn http2_settings_order(&mut self, order: Option<SettingsOrder>) -> &mut Self {
+        self.h2_builder.settings_order(order);
+        self
+    }
+
+    /// HTTP/2 priority frames
+    ///
+    /// The default value is determined by the `h2` crate.
+    #[cfg(feature = "http2")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "http2")))]
+    pub fn http2_priorities(&mut self, priorites: Option<Priorities>) -> &mut Self {
+        self.h2_builder.priorities(priorites);
         self
     }
 
