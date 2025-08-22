@@ -1429,7 +1429,7 @@ impl Builder {
     /// Default is currently 16KB, but can change.
     #[cfg(feature = "http2")]
     #[cfg_attr(docsrs, doc(cfg(feature = "http2")))]
-    pub fn http2_max_header_list_size(&mut self, max: u32) -> &mut Self {
+    pub fn http2_max_header_list_size(&mut self, max: impl Into<Option<u32>>) -> &mut Self {
         self.h2_builder.max_header_list_size(max);
         self
     }
