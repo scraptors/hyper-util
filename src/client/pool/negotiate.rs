@@ -214,10 +214,10 @@ mod internal {
             C: Service<Dst>,
             C::Error: Into<BoxError>,
             L: Layer<Inspector<C, C::Response, I>>,
-            L::Service: Service<Dst> + Clone,
+            L::Service: Service<Dst>,
             <L::Service as Service<Dst>>::Error: Into<BoxError>,
             R: Layer<Inspected<C::Response>>,
-            R::Service: Service<()> + Clone,
+            R::Service: Service<()>,
             <R::Service as Service<()>>::Error: Into<BoxError>,
             I: Fn(&C::Response) -> bool + Clone,
         {
