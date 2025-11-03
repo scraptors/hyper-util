@@ -39,7 +39,7 @@ impl<B> Clone for Http1Layer<B> {
     fn clone(&self) -> Self {
         Self {
             builder: self.builder.clone(),
-            _body: self._body.clone(),
+            _body: self._body,
         }
     }
 }
@@ -101,49 +101,69 @@ impl<M: Clone, B> Clone for Http1Connect<M, B> {
         Self {
             inner: self.inner.clone(),
             builder: self.builder.clone(),
-            _body: self._body.clone(),
-        }
-    }
-}
-
-/// todo
-pub struct Http2Layer<B> {
-    _body: PhantomData<fn(B)>,
-}
-
-/// todo
-pub fn http2<B>() -> Http2Layer<B> {
-    Http2Layer { _body: PhantomData }
-}
-
-impl<M, B> tower_layer::Layer<M> for Http2Layer<B> {
-    type Service = Http2Connect<M, B>;
-    fn layer(&self, inner: M) -> Self::Service {
-        Http2Connect {
-            inner,
-            builder: hyper::client::conn::http2::Builder::new(crate::rt::TokioExecutor::new()),
             _body: self._body,
         }
     }
 }
 
-impl<B> Clone for Http2Layer<B> {
+/// todo
+pub struct Http2Layer<B, E> {
+    builder: hyper::client::conn::http2::Builder<E>,
+    _body: PhantomData<fn(B)>,
+}
+
+/// todo
+pub fn http2<B, E>(executor: E) -> Http2Layer<B, E>
+where
+    E: Clone,
+{
+    Http2Layer {
+        builder: hyper::client::conn::http2::Builder::new(executor),
+        _body: PhantomData,
+    }
+}
+
+impl<M, B, E> tower_layer::Layer<M> for Http2Layer<B, E>
+where
+    E: Clone,
+{
+    type Service = Http2Connect<M, B, E>;
+    fn layer(&self, inner: M) -> Self::Service {
+        Http2Connect {
+            inner,
+            builder: self.builder.clone(),
+            _body: self._body,
+        }
+    }
+}
+
+impl<B, E: Clone> Clone for Http2Layer<B, E> {
     fn clone(&self) -> Self {
         Self {
-            _body: self._body.clone(),
+            builder: self.builder.clone(),
+            _body: self._body,
+        }
+    }
+}
+
+impl<B, E> From<hyper::client::conn::http2::Builder<E>> for Http2Layer<B, E> {
+    fn from(builder: hyper::client::conn::http2::Builder<E>) -> Self {
+        Self {
+            builder,
+            _body: PhantomData,
         }
     }
 }
 
 /// todo
 #[derive(Debug)]
-pub struct Http2Connect<M, B> {
+pub struct Http2Connect<M, B, E> {
     inner: M,
-    builder: hyper::client::conn::http2::Builder<crate::rt::TokioExecutor>,
+    builder: hyper::client::conn::http2::Builder<E>,
     _body: PhantomData<fn(B)>,
 }
 
-impl<M, Dst, B> Service<Dst> for Http2Connect<M, B>
+impl<M, Dst, B, E> Service<Dst> for Http2Connect<M, B, E>
 where
     M: Service<Dst>,
     M::Future: Send + 'static,
@@ -152,6 +172,7 @@ where
     B: hyper::body::Body + Unpin + Send + 'static,
     B::Data: Send + 'static,
     B::Error: Into<BoxError>,
+    E: hyper::rt::bounds::Http2ClientConnExec<B, M::Response> + Unpin + Clone + Send + 'static,
 {
     type Response = Http2ClientService<B>;
     type Error = BoxError;
@@ -179,12 +200,12 @@ where
     }
 }
 
-impl<M: Clone, B> Clone for Http2Connect<M, B> {
+impl<M: Clone, B, E: Clone> Clone for Http2Connect<M, B, E> {
     fn clone(&self) -> Self {
         Self {
             inner: self.inner.clone(),
             builder: self.builder.clone(),
-            _body: self._body.clone(),
+            _body: self._body,
         }
     }
 }
@@ -218,7 +239,7 @@ where
 
     fn call(&mut self, req: Request<B>) -> Self::Future {
         let fut = self.tx.send_request(req);
-        Box::pin(async move { Ok(fut.await?) })
+        Box::pin(fut)
     }
 }
 
@@ -249,7 +270,7 @@ where
 
     fn call(&mut self, req: Request<B>) -> Self::Future {
         let fut = self.tx.send_request(req);
-        Box::pin(async move { Ok(fut.await?) })
+        Box::pin(fut)
     }
 }
 
