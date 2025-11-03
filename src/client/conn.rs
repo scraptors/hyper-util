@@ -11,12 +11,14 @@ use tower_service::Service;
 type BoxError = Box<dyn std::error::Error + Send + Sync>;
 
 /// todo
+#[cfg(feature = "http1")]
 pub struct Http1Layer<B> {
     builder: hyper::client::conn::http1::Builder,
     _body: PhantomData<fn(B)>,
 }
 
 /// todo
+#[cfg(feature = "http1")]
 pub fn http1<B>() -> Http1Layer<B> {
     Http1Layer {
         builder: hyper::client::conn::http1::Builder::new(),
@@ -24,6 +26,7 @@ pub fn http1<B>() -> Http1Layer<B> {
     }
 }
 
+#[cfg(feature = "http1")]
 impl<M, B> tower_layer::Layer<M> for Http1Layer<B> {
     type Service = Http1Connect<M, B>;
     fn layer(&self, inner: M) -> Self::Service {
@@ -35,6 +38,7 @@ impl<M, B> tower_layer::Layer<M> for Http1Layer<B> {
     }
 }
 
+#[cfg(feature = "http1")]
 impl<B> Clone for Http1Layer<B> {
     fn clone(&self) -> Self {
         Self {
@@ -44,6 +48,7 @@ impl<B> Clone for Http1Layer<B> {
     }
 }
 
+#[cfg(feature = "http1")]
 impl<B> From<hyper::client::conn::http1::Builder> for Http1Layer<B> {
     fn from(builder: hyper::client::conn::http1::Builder) -> Self {
         Self {
@@ -54,12 +59,15 @@ impl<B> From<hyper::client::conn::http1::Builder> for Http1Layer<B> {
 }
 
 /// todo
+#[cfg(feature = "http1")]
+#[derive(Debug)]
 pub struct Http1Connect<M, B> {
     inner: M,
     builder: hyper::client::conn::http1::Builder,
     _body: PhantomData<fn(B)>,
 }
 
+#[cfg(feature = "http1")]
 impl<M, Dst, B> Service<Dst> for Http1Connect<M, B>
 where
     M: Service<Dst>,
@@ -96,6 +104,7 @@ where
     }
 }
 
+#[cfg(feature = "http1")]
 impl<M: Clone, B> Clone for Http1Connect<M, B> {
     fn clone(&self) -> Self {
         Self {
@@ -107,12 +116,14 @@ impl<M: Clone, B> Clone for Http1Connect<M, B> {
 }
 
 /// todo
+#[cfg(feature = "http2")]
 pub struct Http2Layer<B, E> {
     builder: hyper::client::conn::http2::Builder<E>,
     _body: PhantomData<fn(B)>,
 }
 
 /// todo
+#[cfg(feature = "http2")]
 pub fn http2<B, E>(executor: E) -> Http2Layer<B, E>
 where
     E: Clone,
@@ -123,6 +134,7 @@ where
     }
 }
 
+#[cfg(feature = "http2")]
 impl<M, B, E> tower_layer::Layer<M> for Http2Layer<B, E>
 where
     E: Clone,
@@ -137,6 +149,7 @@ where
     }
 }
 
+#[cfg(feature = "http2")]
 impl<B, E: Clone> Clone for Http2Layer<B, E> {
     fn clone(&self) -> Self {
         Self {
@@ -146,6 +159,7 @@ impl<B, E: Clone> Clone for Http2Layer<B, E> {
     }
 }
 
+#[cfg(feature = "http2")]
 impl<B, E> From<hyper::client::conn::http2::Builder<E>> for Http2Layer<B, E> {
     fn from(builder: hyper::client::conn::http2::Builder<E>) -> Self {
         Self {
@@ -156,6 +170,7 @@ impl<B, E> From<hyper::client::conn::http2::Builder<E>> for Http2Layer<B, E> {
 }
 
 /// todo
+#[cfg(feature = "http2")]
 #[derive(Debug)]
 pub struct Http2Connect<M, B, E> {
     inner: M,
@@ -163,6 +178,7 @@ pub struct Http2Connect<M, B, E> {
     _body: PhantomData<fn(B)>,
 }
 
+#[cfg(feature = "http2")]
 impl<M, Dst, B, E> Service<Dst> for Http2Connect<M, B, E>
 where
     M: Service<Dst>,
@@ -200,6 +216,7 @@ where
     }
 }
 
+#[cfg(feature = "http2")]
 impl<M: Clone, B, E: Clone> Clone for Http2Connect<M, B, E> {
     fn clone(&self) -> Self {
         Self {
@@ -211,11 +228,13 @@ impl<M: Clone, B, E: Clone> Clone for Http2Connect<M, B, E> {
 }
 
 /// A thin adapter over hyper HTTP/1 client SendRequest.
+#[cfg(feature = "http1")]
 #[derive(Debug)]
 pub struct Http1ClientService<B> {
     tx: hyper::client::conn::http1::SendRequest<B>,
 }
 
+#[cfg(feature = "http1")]
 impl<B> Http1ClientService<B> {
     /// todo
     pub fn new(tx: hyper::client::conn::http1::SendRequest<B>) -> Self {
@@ -223,6 +242,7 @@ impl<B> Http1ClientService<B> {
     }
 }
 
+#[cfg(feature = "http1")]
 impl<B> Service<Request<B>> for Http1ClientService<B>
 where
     B: hyper::body::Body + Send + 'static,
@@ -244,11 +264,13 @@ where
 }
 
 /// todo
+#[cfg(feature = "http2")]
 #[derive(Debug)]
 pub struct Http2ClientService<B> {
     tx: hyper::client::conn::http2::SendRequest<B>,
 }
 
+#[cfg(feature = "http2")]
 impl<B> Http2ClientService<B> {
     /// todo
     pub fn new(tx: hyper::client::conn::http2::SendRequest<B>) -> Self {
@@ -256,6 +278,7 @@ impl<B> Http2ClientService<B> {
     }
 }
 
+#[cfg(feature = "http2")]
 impl<B> Service<Request<B>> for Http2ClientService<B>
 where
     B: hyper::body::Body + Send + 'static,
@@ -274,6 +297,7 @@ where
     }
 }
 
+#[cfg(feature = "http2")]
 impl<B> Clone for Http2ClientService<B> {
     fn clone(&self) -> Self {
         Self {
