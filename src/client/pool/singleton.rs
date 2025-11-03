@@ -41,7 +41,6 @@ enum State<S> {
 impl<M, Target> Singleton<M, Target>
 where
     M: Service<Target>,
-    M::Response: Clone,
 {
     /// Create a new singleton pool over an inner make service.
     pub fn new(mk_svc: M) -> Self {
