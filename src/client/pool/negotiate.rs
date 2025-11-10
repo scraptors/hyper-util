@@ -67,6 +67,7 @@ mod internal {
     /// This type is normally unnameable, forbidding naming of the type within
     /// code. The type is exposed in the documentation to show which methods
     /// can be publicly called.
+    #[derive(Clone)]
     pub struct Negotiate<L, R> {
         left: L,
         right: R,
