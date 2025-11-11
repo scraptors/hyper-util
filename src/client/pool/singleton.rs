@@ -41,6 +41,7 @@ enum State<S> {
 impl<M, Target> Singleton<M, Target>
 where
     M: Service<Target>,
+    M::Response: Clone,
 {
     /// Create a new singleton pool over an inner make service.
     pub fn new(mk_svc: M) -> Self {
@@ -51,7 +52,23 @@ where
     }
 
     // pub fn reset?
-    // pub fn retain?
+
+    /*
+    /// Retains the inner made service if specified by the predicate.
+    pub fn retain<F>(&mut self, predicate: F)
+    where
+        F: FnMut(&mut M::Response) -> bool,
+    {
+        let mut locked = self.state.lock().unwrap();
+        match *locked {
+            State::Empty => {},
+            State::Making(..) => {},
+            State::Made(mut svc) => {
+
+            }
+        }
+    }
+    */
 }
 
 impl<M, Target> Service<Target> for Singleton<M, Target>
@@ -166,6 +183,7 @@ mod internal {
                                     }
                                     State::Empty | State::Made(_) => {
                                         // shouldn't happen!
+                                        unreachable!()
                                     }
                                 }
                             }

@@ -80,6 +80,7 @@ mod internal {
     /// code. The type is exposed in the documentation to show which methods
     /// can be publicly called.
     pub struct Cached<S> {
+        is_closed: bool,
         inner: Option<S>,
         shared: Weak<Mutex<Shared<S>>>,
         // todo: on_idle
@@ -156,6 +157,19 @@ mod internal {
     }
 
     // impl Cache
+
+    impl<M, Dst, Ev> Cache<M, Dst, Ev>
+    where
+        M: Service<Dst>,
+    {
+        /// Retain all cached services indicated by the predicate.
+        pub fn retain<F>(&mut self, predicate: F)
+        where
+            F: FnMut(&mut M::Response) -> bool,
+        {
+            self.shared.lock().unwrap().services.retain_mut(predicate);
+        }
+    }
 
     impl<M, Dst, Ev> Service<Dst> for Cache<M, Dst, Ev>
     where
@@ -278,6 +292,7 @@ mod internal {
     impl<S> Cached<S> {
         fn new(inner: S, shared: Weak<Mutex<Shared<S>>>) -> Self {
             Cached {
+                is_closed: false,
                 inner: Some(inner),
                 shared,
             }
@@ -293,7 +308,10 @@ mod internal {
         type Future = S::Future;
 
         fn poll_ready(&mut self, cx: &mut task::Context<'_>) -> Poll<Result<(), Self::Error>> {
-            self.inner.as_mut().unwrap().poll_ready(cx)
+            self.inner.as_mut().unwrap().poll_ready(cx).map_err(|err| {
+                self.is_closed = true;
+                err
+            })
         }
 
         fn call(&mut self, req: Req) -> Self::Future {
@@ -303,6 +321,9 @@ mod internal {
 
     impl<S> Drop for Cached<S> {
         fn drop(&mut self) {
+            if self.is_closed {
+                return;
+            }
             if let Some(value) = self.inner.take() {
                 if let Some(shared) = self.shared.upgrade() {
                     if let Ok(mut shared) = shared.lock() {

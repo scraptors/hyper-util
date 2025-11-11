@@ -79,6 +79,19 @@ where
             .entry(key)
             .or_insert_with(|| self.targeter.service(req))
     }
+
+    /// Retains only the services specified by the predicate.
+    pub fn retain<F>(&mut self, predicate: F)
+    where
+        F: FnMut(&T::Key, &mut T::Service) -> bool,
+    {
+        self.map.retain(predicate);
+    }
+
+    /// Clears the map, removing all key-value pairs.
+    pub fn clear(&mut self) {
+        self.map.clear();
+    }
 }
 
 // sealed and unnameable for now

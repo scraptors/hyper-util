@@ -294,7 +294,7 @@ mod internal {
                         Ok(out) => return Poll::Ready(Ok(Negotiated::Upgraded(out))),
                         Err(err) => {
                             let err = err.into();
-                            if err.is::<UseOther>() {
+                            if UseOther::is(&*err) {
                                 let dst = dst.take().unwrap();
                                 let f = me.left.call(dst);
                                 me.state.set(State::Fallback { future: f });
@@ -308,7 +308,7 @@ mod internal {
                         Ok(out) => return Poll::Ready(Ok(Negotiated::Fallback(out))),
                         Err(err) => {
                             let err = err.into();
-                            if err.is::<UseOther>() {
+                            if UseOther::is(&*err) {
                                 let f = me.right.call(());
                                 me.state.set(State::Upgrade { future: f });
                                 continue;
@@ -497,6 +497,19 @@ mod internal {
     }
 
     impl std::error::Error for UseOther {}
+
+    impl UseOther {
+        fn is(err: &(dyn std::error::Error + 'static)) -> bool {
+            let mut source = Some(err);
+            while let Some(err) = source {
+                if err.is::<UseOther>() {
+                    return true;
+                }
+                source = err.source();
+            }
+            false
+        }
+    }
 }
 
 #[cfg(test)]
