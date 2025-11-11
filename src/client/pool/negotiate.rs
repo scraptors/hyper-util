@@ -67,7 +67,10 @@ mod internal {
     /// without exposing internal implementation details.
     ///
     /// Any `Layer` that can wrap an `Inspector` automatically implements this trait.
-    pub trait FallbackLayer<C, S, I>: sealed::SealedFallback<C, S, I> {}
+    pub trait FallbackLayer<C, S, I>:
+        sealed::SealedFallback<C, S, I> + Layer<Inspector<C, S, I>>
+    {
+    }
 
     /// A sealed marker trait for layers that can be used in the upgrade position.
     ///
@@ -76,7 +79,7 @@ mod internal {
     /// without exposing internal implementation details.
     ///
     /// Any `Layer` that can wrap an `Inspected` automatically implements this trait.
-    pub trait UpgradeLayer<S>: sealed::SealedUpgrade<S> {}
+    pub trait UpgradeLayer<S>: sealed::SealedUpgrade<S> + Layer<Inspected<S>> {}
 
     mod sealed {
         use super::{Inspected, Inspector};
@@ -378,10 +381,6 @@ mod internal {
             matches!(self, Negotiated::Fallback(_))
         }
 
-        pub(super) fn is_upgraded(&self) -> bool {
-            matches!(self, Negotiated::Upgraded(_))
-        }
- 
         #[cfg(test)]
         pub(super) fn is_upgraded(&self) -> bool {
             matches!(self, Negotiated::Upgraded(_))
