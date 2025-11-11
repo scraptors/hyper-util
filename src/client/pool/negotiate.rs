@@ -45,6 +45,8 @@ pub use self::internal::Negotiate;
 #[cfg(docsrs)]
 pub use self::internal::Negotiated;
 
+pub use self::internal::{FallbackLayer, UpgradeLayer};
+
 mod internal {
     use std::future::Future;
     use std::pin::Pin;
@@ -57,6 +59,39 @@ mod internal {
     use tower_service::Service;
 
     type BoxError = Box<dyn std::error::Error + Send + Sync>;
+
+    /// A sealed marker trait for layers that can be used in the fallback position.
+    ///
+    /// This trait is sealed and cannot be implemented outside this crate.
+    /// It provides a way to express trait bounds generically over the negotiate pool
+    /// without exposing internal implementation details.
+    ///
+    /// Any `Layer` that can wrap an `Inspector` automatically implements this trait.
+    pub trait FallbackLayer<C, S, I>: sealed::SealedFallback<C, S, I> {}
+
+    /// A sealed marker trait for layers that can be used in the upgrade position.
+    ///
+    /// This trait is sealed and cannot be implemented outside this crate.
+    /// It provides a way to express trait bounds generically over the negotiate pool
+    /// without exposing internal implementation details.
+    ///
+    /// Any `Layer` that can wrap an `Inspected` automatically implements this trait.
+    pub trait UpgradeLayer<S>: sealed::SealedUpgrade<S> {}
+
+    mod sealed {
+        use super::{Inspected, Inspector};
+        use tower_layer::Layer;
+
+        pub trait SealedFallback<C, S, I> {}
+        impl<C, S, I, L> SealedFallback<C, S, I> for L where L: Layer<Inspector<C, S, I>> {}
+
+        pub trait SealedUpgrade<S> {}
+        impl<S, R> SealedUpgrade<S> for R where R: Layer<Inspected<S>> {}
+    }
+
+    impl<C, S, I, L> FallbackLayer<C, S, I> for L where L: Layer<Inspector<C, S, I>> {}
+
+    impl<S, R> UpgradeLayer<S> for R where R: Layer<Inspected<S>> {}
 
     /// A negotiating pool over an inner make service.
     ///
@@ -210,6 +245,13 @@ mod internal {
         }
 
         /// Build the `Negotiate` pool.
+        ///
+        /// # Generic Bounds
+        ///
+        /// When working with this method generically, you can use the sealed traits
+        /// [`FallbackLayer`](crate::client::pool::negotiate::FallbackLayer) and
+        /// [`UpgradeLayer`](crate::client::pool::negotiate::UpgradeLayer) to express
+        /// the requirements without needing to reference the internal types directly.
         pub fn build<Dst>(self) -> Negotiate<L::Service, R::Service>
         where
             C: Service<Dst>,
