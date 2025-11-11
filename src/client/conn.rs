@@ -8,8 +8,9 @@ use std::task::{Context, Poll};
 use http::{Request, Response};
 use tower_service::Service;
 
-type BoxError = Box<dyn std::error::Error + Send + Sync>;
+use crate::common::future::poll_fn;
 
+type BoxError = Box<dyn std::error::Error + Send + Sync>;
 /// todo
 #[cfg(feature = "http1")]
 pub struct Http1Layer<B> {
@@ -60,7 +61,6 @@ impl<B> From<hyper::client::conn::http1::Builder> for Http1Layer<B> {
 
 /// todo
 #[cfg(feature = "http1")]
-#[derive(Debug)]
 pub struct Http1Connect<M, B> {
     inner: M,
     builder: hyper::client::conn::http1::Builder,
@@ -82,10 +82,8 @@ where
     type Error = BoxError;
     type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
 
-    fn poll_ready(&mut self, _cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        // Minimal, explicit contract: delegate readiness to the response future.
-        // If you want strict backpressure, use the "permit" pattern (see notes).
-        Poll::Ready(Ok(()))
+    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        self.inner.poll_ready(cx).map_err(Into::into)
     }
 
     fn call(&mut self, dst: Dst) -> Self::Future {
@@ -93,12 +91,16 @@ where
         let builder = self.builder.clone();
         Box::pin(async move {
             let io = fut.await.map_err(Into::into)?;
-            let (tx, conn) = builder.handshake(io).await?;
+            let (mut tx, conn) = builder.handshake(io).await?;
+            //todo: pass in Executor
             tokio::spawn(async move {
                 if let Err(e) = conn.await {
                     eprintln!("connection error: {:?}", e);
                 }
             });
+            // todo: wait for ready? or factor out to other middleware?
+            poll_fn(|cx| tx.poll_ready(cx)).await?;
+
             Ok(Http1ClientService::new(tx))
         })
     }
@@ -194,10 +196,8 @@ where
     type Error = BoxError;
     type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
 
-    fn poll_ready(&mut self, _cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        // Minimal, explicit contract: delegate readiness to the response future.
-        // If you want strict backpressure, use the "permit" pattern (see notes).
-        Poll::Ready(Ok(()))
+    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        self.inner.poll_ready(cx).map_err(Into::into)
     }
 
     fn call(&mut self, dst: Dst) -> Self::Future {
@@ -205,12 +205,15 @@ where
         let builder = self.builder.clone();
         Box::pin(async move {
             let io = fut.await.map_err(Into::into)?;
-            let (tx, conn) = builder.handshake(io).await?;
+            let (mut tx, conn) = builder.handshake(io).await?;
             tokio::spawn(async move {
                 if let Err(e) = conn.await {
                     eprintln!("connection error: {:?}", e);
                 }
             });
+
+            // todo: wait for ready? or factor out to other middleware?
+            poll_fn(|cx| tx.poll_ready(cx)).await?;
             Ok(Http2ClientService::new(tx))
         })
     }
@@ -251,10 +254,8 @@ where
     type Error = hyper::Error;
     type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
 
-    fn poll_ready(&mut self, _cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        // Minimal, explicit contract: delegate readiness to the response future.
-        // If you want strict backpressure, use the "permit" pattern (see notes).
-        Poll::Ready(Ok(()))
+    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        self.tx.poll_ready(cx)
     }
 
     fn call(&mut self, req: Request<B>) -> Self::Future {
@@ -287,8 +288,8 @@ where
     type Error = hyper::Error;
     type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
 
-    fn poll_ready(&mut self, _cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        Poll::Ready(Ok(()))
+    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        self.tx.poll_ready(cx)
     }
 
     fn call(&mut self, req: Request<B>) -> Self::Future {
