@@ -1,13 +1,12 @@
 //! todo
 
-use std::task::{Context, Poll};
 use std::sync::{Arc, Mutex, Weak};
+use std::task::{Context, Poll};
 
 use tower_service::Service;
 
-
 /// todo
-pub  struct Expire<S> {
+pub struct Expire<S> {
     inner: Arc<Mutex<S>>,
 }
 
@@ -35,16 +34,15 @@ where
     }
 }
 
-
 // ===== impl Handle =====
 
-impl<S> Handle<S> {
-    pub async fn when<'a, F>(&self, fut: F) -> Option<impl std::ops::DerefMut<Target = S>>
-    where
-        F: std::future::Future<Output = ()>,
-    {
-        fut.await;
-        //Some(self.inner.upgrade()?.lock().unwrap())
-        todo!()
-    }
-}
+// impl<S> Handle<S> {
+//     pub async fn when<'a, F>(&self, fut: F) -> Option<impl std::ops::DerefMut<Target = S>>
+//     where
+//         F: std::future::Future<Output = ()>,
+//     {
+//         fut.await;
+//         // Some(self.inner.upgrade()?.lock().unwrap())
+//         // todo!()
+//     }
+// }
