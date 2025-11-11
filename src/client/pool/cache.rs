@@ -169,6 +169,11 @@ mod internal {
         {
             self.shared.lock().unwrap().services.retain_mut(predicate);
         }
+
+        /// Check whether this cache has no cached services.
+        pub fn is_empty(&self) -> bool {
+            self.shared.lock().unwrap().services.is_empty()
+        }
     }
 
     impl<M, Dst, Ev> Service<Dst> for Cache<M, Dst, Ev>
@@ -296,6 +301,18 @@ mod internal {
                 inner: Some(inner),
                 shared,
             }
+        }
+
+        // TODO: inner()? looks like `tower` likes `get_ref()` and `get_mut()`.
+
+        /// Get a reference to the inner service.
+        pub fn inner(&self) -> &S {
+            self.inner.as_ref().expect("inner only taken in drop")
+        }
+
+        /// Get a mutable reference to the inner service.
+        pub fn inner_mut(&mut self) -> &mut S {
+            self.inner.as_mut().expect("inner only taken in drop")
         }
     }
 

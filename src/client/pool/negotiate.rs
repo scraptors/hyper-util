@@ -245,13 +245,6 @@ mod internal {
         }
 
         /// Build the `Negotiate` pool.
-        ///
-        /// # Generic Bounds
-        ///
-        /// When working with this method generically, you can use the sealed traits
-        /// [`FallbackLayer`](crate::client::pool::negotiate::FallbackLayer) and
-        /// [`UpgradeLayer`](crate::client::pool::negotiate::UpgradeLayer) to express
-        /// the requirements without needing to reference the internal types directly.
         pub fn build<Dst>(self) -> Negotiate<L::Service, R::Service>
         where
             C: Service<Dst>,
@@ -282,6 +275,16 @@ mod internal {
             let right = upgrade.layer(Inspected { slot });
 
             Negotiate { left, right }
+        }
+    }
+
+    impl<L, R> Negotiate<L, R> {
+        /// wat
+        pub fn retain<F>(&mut self, mut predicate: F)
+        where
+            F: FnMut(&mut L, &mut R) -> bool,
+        {
+            predicate(&mut self.left, &mut self.right);
         }
     }
 
@@ -368,15 +371,58 @@ mod internal {
         }
     }
 
-    #[cfg(test)]
     impl<L, R> Negotiated<L, R> {
         // Could be useful?
+        #[cfg(test)]
         pub(super) fn is_fallback(&self) -> bool {
             matches!(self, Negotiated::Fallback(_))
         }
 
         pub(super) fn is_upgraded(&self) -> bool {
             matches!(self, Negotiated::Upgraded(_))
+        }
+ 
+        #[cfg(test)]
+        pub(super) fn is_upgraded(&self) -> bool {
+            matches!(self, Negotiated::Upgraded(_))
+        }
+
+        // TODO: are these the correct methods? Or .as_ref().fallback(), etc?
+
+        /// Get a reference to the fallback service if this is it.
+        pub fn fallback_ref(&self) -> Option<&L> {
+            if let Negotiated::Fallback(ref left) = self {
+                Some(left)
+            } else {
+                None
+            }
+        }
+
+        /// Get a mutable reference to the fallback service if this is it.
+        pub fn fallback_mut(&mut self) -> Option<&mut L> {
+            if let Negotiated::Fallback(ref mut left) = self {
+                Some(left)
+            } else {
+                None
+            }
+        }
+
+        /// Get a reference to the upgraded service if this is it.
+        pub fn upgraded_ref(&self) -> Option<&R> {
+            if let Negotiated::Upgraded(ref right) = self {
+                Some(right)
+            } else {
+                None
+            }
+        }
+
+        /// Get a mutable reference to the upgraded service if this is it.
+        pub fn upgraded_mut(&mut self) -> Option<&mut R> {
+            if let Negotiated::Upgraded(ref mut right) = self {
+                Some(right)
+            } else {
+                None
+            }
         }
     }
 

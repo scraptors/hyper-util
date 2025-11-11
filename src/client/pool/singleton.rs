@@ -51,24 +51,32 @@ where
         }
     }
 
-    // pub fn reset?
+    // pub fn clear? cancel?
 
-    /*
     /// Retains the inner made service if specified by the predicate.
-    pub fn retain<F>(&mut self, predicate: F)
+    pub fn retain<F>(&mut self, mut predicate: F)
     where
         F: FnMut(&mut M::Response) -> bool,
     {
         let mut locked = self.state.lock().unwrap();
         match *locked {
-            State::Empty => {},
-            State::Making(..) => {},
-            State::Made(mut svc) => {
-
+            State::Empty => {}
+            State::Making(..) => {}
+            State::Made(ref mut svc) => {
+                if !predicate(svc) {
+                    *locked = State::Empty;
+                }
             }
         }
     }
-    */
+
+    /// Returns whether this singleton pool is empty.
+    ///
+    /// If this pool has created a shared instance, or is currently in the
+    /// process of creating one, this returns false.
+    pub fn is_empty(&self) -> bool {
+        matches!(*self.state.lock().unwrap(), State::Empty)
+    }
 }
 
 impl<M, Target> Service<Target> for Singleton<M, Target>
