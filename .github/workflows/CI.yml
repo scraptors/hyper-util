@@ -126,12 +126,4 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@nightly
-<<<<<<< HEAD
-<<<<<<< HEAD
       - run: cargo rustdoc --features full -- --cfg docsrs -D rustdoc::broken-intra-doc-links
-=======
-      - run: cargo rustdoc --featues full -- --cfg docsrs -D rustdoc::broken_intra_doc_links
->>>>>>> 20769abb5606def2aad645768672bc5b6480b50a
-=======
-      - run: cargo rustdoc --featues full -- --cfg docsrs -D rustdoc::broken_intra_doc_links
->>>>>>> 09a85d05754ab3bf22227acaf0ddce3905c2c806

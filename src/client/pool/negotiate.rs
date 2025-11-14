@@ -369,12 +369,14 @@ mod internal {
     }
 
     impl<L, R> Negotiate<L, R> {
-        /// wat
-        pub fn retain<F>(&mut self, mut predicate: F)
-        where
-            F: FnMut(&mut L, &mut R) -> bool,
-        {
-            predicate(&mut self.left, &mut self.right);
+        /// Get a mutable reference to the fallback service.
+        pub fn fallback_mut(&mut self) -> &mut L {
+            &mut self.left
+        }
+
+        /// Get a mutable reference to the upgrade service.
+        pub fn upgrade_mut(&mut self) -> &mut R {
+            &mut self.right
         }
     }
 
