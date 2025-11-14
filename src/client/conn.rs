@@ -11,6 +11,7 @@ use tower_service::Service;
 use crate::common::future::poll_fn;
 
 type BoxError = Box<dyn std::error::Error + Send + Sync>;
+
 /// todo
 #[cfg(feature = "http1")]
 pub struct Http1Layer<B> {
@@ -243,6 +244,11 @@ impl<B> Http1ClientService<B> {
     pub fn new(tx: hyper::client::conn::http1::SendRequest<B>) -> Self {
         Self { tx }
     }
+
+    /// Checks if the connection side has been closed.
+    pub fn is_closed(&self) -> bool {
+        self.tx.is_closed()
+    }
 }
 
 #[cfg(feature = "http1")]
@@ -276,6 +282,11 @@ impl<B> Http2ClientService<B> {
     /// todo
     pub fn new(tx: hyper::client::conn::http2::SendRequest<B>) -> Self {
         Self { tx }
+    }
+
+    /// Checks if the connection side has been closed.
+    pub fn is_closed(&self) -> bool {
+        self.tx.is_closed()
     }
 }
 
