@@ -35,15 +35,16 @@ where
     }
 }
 
+
 // ===== impl Handle =====
 
-// impl<S> Handle<S> {
-//     pub async fn when<'a, F>(&self, fut: F) -> Option<impl std::ops::DerefMut<Target = S>>
-//     where
-//         F: std::future::Future<Output = ()>,
-//     {
-//         fut.await;
-//         // Some(self.inner.upgrade()?.lock().unwrap())
-//         // todo!()
-//     }
-// }
+impl<S> Handle<S> {
+    pub async fn when<'a, F>(&self, fut: F) -> Option<impl std::ops::DerefMut<Target = S>>
+    where
+        F: std::future::Future<Output = ()>,
+    {
+        fut.await;
+        //Some(self.inner.upgrade()?.lock().unwrap())
+        todo!()
+    }
+}

@@ -1,7 +1,9 @@
 //! Singleton pools
 //!
-//! The singleton pool combines a MakeService that should only produce a single
-//! active connection. It can bundle all concurrent calls to it, so that only
+//! This ensures that only one active connection is made.
+//!
+//! The singleton pool wraps a `MakeService<T, Req>` so that it only produces a
+//! single `Service<Req>`. It bundles all concurrent calls to it, so that only
 //! one connection is made. All calls to the singleton will return a clone of
 //! the inner service once established.
 //!
@@ -16,6 +18,9 @@ use tower_service::Service;
 use self::internal::{DitchGuard, SingletonError, SingletonFuture};
 
 type BoxError = Box<dyn std::error::Error + Send + Sync>;
+
+#[cfg(docsrs)]
+pub use self::internal::Singled;
 
 /// A singleton pool over an inner service.
 ///
@@ -85,7 +90,7 @@ where
     M::Response: Clone,
     M::Error: Into<BoxError>,
 {
-    type Response = M::Response;
+    type Response = internal::Singled<M::Response>;
     type Error = SingletonError;
     type Future = SingletonFuture<M::Future, M::Response>;
 
@@ -113,10 +118,14 @@ where
             State::Making(ref mut waiters) => {
                 let (tx, rx) = oneshot::channel();
                 waiters.push(tx);
-                SingletonFuture::Waiting { rx }
+                SingletonFuture::Waiting {
+                    rx,
+                    state: Arc::downgrade(&self.state),
+                }
             }
             State::Made(ref svc) => SingletonFuture::Made {
                 svc: Some(svc.clone()),
+                state: Arc::downgrade(&self.state),
             },
         }
     }
@@ -144,6 +153,7 @@ mod internal {
     use futures_core::ready;
     use pin_project_lite::pin_project;
     use tokio::sync::oneshot;
+    use tower_service::Service;
 
     use super::{BoxError, State};
 
@@ -157,9 +167,11 @@ mod internal {
             },
             Waiting {
                 rx: oneshot::Receiver<S>,
+                state: Weak<Mutex<State<S>>>,
             },
             Made {
                 svc: Option<S>,
+                state: Weak<Mutex<State<S>>>,
             },
         }
     }
@@ -167,13 +179,30 @@ mod internal {
     // XXX: pub because of the enum SingletonFuture
     pub struct DitchGuard<S>(pub(super) Weak<Mutex<State<S>>>);
 
+    /// A cached service returned from a [`Singleton`].
+    ///
+    /// Implements `Service` by delegating to the inner service. If
+    /// `poll_ready` returns an error, this will clear the cache in the related
+    /// `Singleton`.
+    ///
+    /// # Unnameable
+    ///
+    /// This type is normally unnameable, forbidding naming of the type within
+    /// code. The type is exposed in the documentation to show which methods
+    /// can be publicly called.
+    #[derive(Debug)]
+    pub struct Singled<S> {
+        inner: S,
+        state: Weak<Mutex<State<S>>>,
+    }
+
     impl<F, S, E> Future for SingletonFuture<F, S>
     where
         F: Future<Output = Result<S, E>>,
         E: Into<BoxError>,
         S: Clone,
     {
-        type Output = Result<S, SingletonError>;
+        type Output = Result<Singled<S>, SingletonError>;
 
         fn poll(self: Pin<&mut Self>, cx: &mut task::Context<'_>) -> Poll<Self::Output> {
             match self.project() {
@@ -182,7 +211,6 @@ mod internal {
                         Ok(svc) => {
                             if let Some(state) = singleton.0.upgrade() {
                                 let mut locked = state.lock().unwrap();
-                                singleton.0 = Weak::new();
                                 match std::mem::replace(&mut *locked, State::Made(svc.clone())) {
                                     State::Making(waiters) => {
                                         for tx in waiters {
@@ -195,7 +223,9 @@ mod internal {
                                     }
                                 }
                             }
-                            Poll::Ready(Ok(svc))
+                            // take out of the DitchGuard so it doesn't treat as "ditched"
+                            let state = std::mem::replace(&mut singleton.0, Weak::new());
+                            Poll::Ready(Ok(Singled::new(svc, state)))
                         }
                         Err(e) => {
                             if let Some(state) = singleton.0.upgrade() {
@@ -207,11 +237,13 @@ mod internal {
                         }
                     }
                 }
-                SingletonFutureProj::Waiting { rx } => match ready!(Pin::new(rx).poll(cx)) {
-                    Ok(svc) => Poll::Ready(Ok(svc)),
+                SingletonFutureProj::Waiting { rx, state } => match ready!(Pin::new(rx).poll(cx)) {
+                    Ok(svc) => Poll::Ready(Ok(Singled::new(svc, state.clone()))),
                     Err(_canceled) => Poll::Ready(Err(SingletonError(Canceled.into()))),
                 },
-                SingletonFutureProj::Made { svc } => Poll::Ready(Ok(svc.take().unwrap())),
+                SingletonFutureProj::Made { svc, state } => {
+                    Poll::Ready(Ok(Singled::new(svc.take().unwrap(), state.clone())))
+                }
             }
         }
     }
@@ -223,6 +255,38 @@ mod internal {
                     *locked = State::Empty;
                 }
             }
+        }
+    }
+
+    impl<S> Singled<S> {
+        fn new(inner: S, state: Weak<Mutex<State<S>>>) -> Self {
+            Singled { inner, state }
+        }
+    }
+
+    impl<S, Req> Service<Req> for Singled<S>
+    where
+        S: Service<Req>,
+    {
+        type Response = S::Response;
+        type Error = S::Error;
+        type Future = S::Future;
+
+        fn poll_ready(&mut self, cx: &mut task::Context<'_>) -> Poll<Result<(), Self::Error>> {
+            // We notice if the cached service dies, and clear the singleton cache.
+            match self.inner.poll_ready(cx) {
+                Poll::Ready(Err(err)) => {
+                    if let Some(state) = self.state.upgrade() {
+                        *state.lock().unwrap() = State::Empty;
+                    }
+                    Poll::Ready(Err(err))
+                }
+                other => other,
+            }
+        }
+
+        fn call(&mut self, req: Req) -> Self::Future {
+            self.inner.call(req)
         }
     }
 
@@ -286,8 +350,8 @@ mod tests {
         send_response.send_response("svc");
 
         // Both futures should resolve to the same value
-        assert_eq!(fut1.await.unwrap(), "svc");
-        assert_eq!(fut2.await.unwrap(), "svc");
+        fut1.await.unwrap();
+        fut2.await.unwrap();
     }
 
     #[tokio::test]
@@ -303,11 +367,68 @@ mod tests {
         let fut1 = singleton.call(());
         let ((), send_response) = handle.next_request().await.unwrap();
         send_response.send_response("svc");
-        assert_eq!(fut1.await.unwrap(), "svc");
+        fut1.await.unwrap();
 
         // Second call should not hit inner service
-        let res = singleton.call(()).await.unwrap();
-        assert_eq!(res, "svc");
+        singleton.call(()).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn cached_service_poll_ready_error_clears_singleton() {
+        // Outer mock returns an inner mock service
+        let (outer, mut outer_handle) =
+            tower_test::mock::pair::<(), tower_test::mock::Mock<(), &'static str>>();
+        let mut singleton = Singleton::new(outer);
+
+        // Allow the singleton to be made
+        outer_handle.allow(2);
+        crate::common::future::poll_fn(|cx| singleton.poll_ready(cx))
+            .await
+            .unwrap();
+
+        // First call produces an inner mock service
+        let fut1 = singleton.call(());
+        let ((), send_inner) = outer_handle.next_request().await.unwrap();
+        let (inner, mut inner_handle) = tower_test::mock::pair::<(), &'static str>();
+        send_inner.send_response(inner);
+        let mut cached = fut1.await.unwrap();
+
+        // Now: allow readiness on the inner mock, then inject error
+        inner_handle.allow(1);
+
+        // Inject error so next poll_ready fails
+        inner_handle.send_error(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            "cached poll_ready failed",
+        ));
+
+        // Drive poll_ready on cached service
+        let err = crate::common::future::poll_fn(|cx| cached.poll_ready(cx))
+            .await
+            .err()
+            .expect("expected poll_ready error");
+        assert_eq!(err.to_string(), "cached poll_ready failed");
+
+        // After error, the singleton should be cleared, so a new call drives outer again
+        outer_handle.allow(1);
+        crate::common::future::poll_fn(|cx| singleton.poll_ready(cx))
+            .await
+            .unwrap();
+        let fut2 = singleton.call(());
+        let ((), send_inner2) = outer_handle.next_request().await.unwrap();
+        let (inner2, mut inner_handle2) = tower_test::mock::pair::<(), &'static str>();
+        send_inner2.send_response(inner2);
+        let mut cached2 = fut2.await.unwrap();
+
+        // The new cached service should still work
+        inner_handle2.allow(1);
+        crate::common::future::poll_fn(|cx| cached2.poll_ready(cx))
+            .await
+            .expect("expected poll_ready");
+        let cfut2 = cached2.call(());
+        let ((), send_cached2) = inner_handle2.next_request().await.unwrap();
+        send_cached2.send_response("svc2");
+        cfut2.await.unwrap();
     }
 
     #[tokio::test]
@@ -325,7 +446,7 @@ mod tests {
         let ((), send_response) = handle.next_request().await.unwrap();
         send_response.send_response("svc");
 
-        assert_eq!(fut1.await.unwrap(), "svc");
+        fut1.await.unwrap();
     }
 
     // TODO: this should be able to be improved with a cooperative baton refactor
