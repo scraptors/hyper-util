@@ -15,7 +15,7 @@ use std::task::{self, Poll};
 use tokio::sync::oneshot;
 use tower_service::Service;
 
-use self::internal::{DitchGuard, SingletonError, SingletonFuture};
+use self::internal::{DitchGuard, SingletonError, SingletonFuture, State};
 
 type BoxError = Box<dyn std::error::Error + Send + Sync>;
 
@@ -34,13 +34,6 @@ where
 {
     mk_svc: M,
     state: Arc<Mutex<State<M::Response>>>,
-}
-
-#[derive(Debug)]
-enum State<S> {
-    Empty,
-    Making(Vec<oneshot::Sender<S>>),
-    Made(S),
 }
 
 impl<M, Target> Singleton<M, Target>
@@ -155,7 +148,7 @@ mod internal {
     use tokio::sync::oneshot;
     use tower_service::Service;
 
-    use super::{BoxError, State};
+    use super::BoxError;
 
     pin_project! {
         #[project = SingletonFutureProj]
@@ -177,6 +170,14 @@ mod internal {
     }
 
     // XXX: pub because of the enum SingletonFuture
+    #[derive(Debug)]
+    pub enum State<S> {
+        Empty,
+        Making(Vec<oneshot::Sender<S>>),
+        Made(S),
+    }
+
+    // XXX: pub because of the enum SingletonFuture
     pub struct DitchGuard<S>(pub(super) Weak<Mutex<State<S>>>);
 
     /// A cached service returned from a [`Singleton`].
@@ -184,6 +185,8 @@ mod internal {
     /// Implements `Service` by delegating to the inner service. If
     /// `poll_ready` returns an error, this will clear the cache in the related
     /// `Singleton`.
+    ///
+    /// [`Singleton`]: super::Singleton
     ///
     /// # Unnameable
     ///
