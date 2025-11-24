@@ -88,24 +88,14 @@ where
     type Future = SingletonFuture<M::Future, M::Response>;
 
     fn poll_ready(&mut self, cx: &mut task::Context<'_>) -> Poll<Result<(), Self::Error>> {
-        let mut locked = self.state.lock().unwrap();
-
-        match *locked {
-            State::Empty => {
-                return self
-                    .mk_svc
-                    .poll_ready(cx)
-                    .map_err(|e| SingletonError(e.into()));
-            }
-            State::Made(ref svc) => {
-                return svc
-                    .poll_ready(cx)
-                    .map_err(|e| SingletonError(e.into()));
-            }
+        if let State::Empty = *self.state.lock().unwrap() {
+            return self
+                .mk_svc
+                .poll_ready(cx)
+                .map_err(|e| SingletonError(e.into()));
         }
         Poll::Ready(Ok(()))
     }
-
     fn call(&mut self, dst: Target) -> Self::Future {
         let mut locked = self.state.lock().unwrap();
         match *locked {
