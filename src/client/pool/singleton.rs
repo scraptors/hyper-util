@@ -96,6 +96,7 @@ where
         }
         Poll::Ready(Ok(()))
     }
+
     fn call(&mut self, dst: Target) -> Self::Future {
         let mut locked = self.state.lock().unwrap();
         match *locked {
