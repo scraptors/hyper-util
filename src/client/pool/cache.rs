@@ -130,7 +130,7 @@ mod internal {
         /// ```rust
         /// # #[cfg(feature = "tokio")]
         /// # fn run() {
-        /// let _builder = hyper_util::client::pool::cache::builder()
+        /// let builder = hyper_util::client::pool::cache::builder()
         ///     .executor(hyper_util::rt::TokioExecutor::new());
         /// # }
         /// ```

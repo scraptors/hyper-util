@@ -19,7 +19,7 @@
 //! # };
 //! let mut map = pool::map::Map::builder()
 //!     .keys(|uri| (uri.scheme().clone(), uri.authority().clone()))
-//!     .values(|_| {
+//!     .values(|_uri| {
 //!         some_http1_connector()
 //!     })
 //!     .build();
