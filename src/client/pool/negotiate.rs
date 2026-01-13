@@ -45,8 +45,6 @@ pub use self::internal::Negotiate;
 #[cfg(docsrs)]
 pub use self::internal::Negotiated;
 
-pub use self::internal::{FallbackLayer, UpgradeLayer};
-
 mod internal {
     use std::future::Future;
     use std::pin::Pin;
@@ -59,129 +57,6 @@ mod internal {
     use tower_service::Service;
 
     type BoxError = Box<dyn std::error::Error + Send + Sync>;
-
-    /// A sealed marker trait for layers that can be used in the fallback position.
-    ///
-    /// This trait is sealed and cannot be implemented outside this crate.
-    /// It provides a way to express trait bounds generically over the negotiate pool
-    /// without exposing internal implementation details.
-    ///
-    /// Any `Layer` that can wrap an `Inspector` automatically implements this trait,
-    /// provided that the resulting service is `Clone` and implements `Service<Dst>`,
-    /// and the response type from that service is also a `Service`.
-    /// 
-    /// # Type Parameters
-    /// 
-    /// * `C` - The connector service type
-    /// * `S` - The connection stream type
-    /// * `I` - The inspector function type
-    /// * `Dst` - The destination/target type for the service (defaults to `()`)
-    /// 
-    /// # Associated Type Constraints
-    /// 
-    /// When using this trait as a bound, the compiler will automatically enforce that:
-    /// - `Self::Service` implements `Service<Dst> + Clone + Send + 'static`
-    /// - `Self::Service::Error` can be converted `Into<BoxError>`
-    /// - `Self::Service::Response` is `Send + 'static`
-    /// - `Self::Service::Future` is `Send`
-    pub trait FallbackLayer<C, S, I, Dst = ()>:
-        sealed::SealedFallback<C, S, I, Dst>
-        + Layer<
-            Inspector<C, S, I>,
-            Service: Service<Dst, Error: Into<BoxError>, Response: Send + 'static, Future: Send> + Clone + Send + 'static,
-        >
-    {
-    }
-
-    /// A sealed marker trait for layers that can be used in the upgrade position.
-    ///
-    /// This trait is sealed and cannot be implemented outside this crate.
-    /// It provides a way to express trait bounds generically over the negotiate pool
-    /// without exposing internal implementation details.
-    ///
-    /// Any `Layer` that can wrap an `Inspected` automatically implements this trait,
-    /// provided that the resulting service is `Clone` and implements `Service<()>`,
-    /// and the response type from that service is also a `Service`.
-    /// 
-    /// # Type Parameters
-    /// 
-    /// * `S` - The connection stream type
-    /// 
-    /// # Associated Type Constraints
-    /// 
-    /// When using this trait as a bound, the compiler will automatically enforce that:
-    /// - `Self::Service` implements `Service<()> + Clone + Send + 'static`
-    /// - `Self::Service::Error` can be converted `Into<BoxError>`
-    /// - `Self::Service::Response` is `Send + 'static`
-    /// - `Self::Service::Future` is `Send`
-    pub trait UpgradeLayer<S>:
-        sealed::SealedUpgrade<S> + Layer<Inspected<S>, Service: Service<(), Error: Into<BoxError>, Response: Send + 'static, Future: Send> + Clone + Send + 'static>
-    {
-    }
-
-    mod sealed {
-        use super::{BoxError, Inspected, Inspector};
-        use tower_layer::Layer;
-        use tower_service::Service;
-
-        pub trait SealedFallback<C, S, I, Dst>: Layer<Inspector<C, S, I>>
-        where
-            Self::Service: Service<Dst> + Clone + Send + 'static,
-            <Self::Service as Service<Dst>>::Error: Into<BoxError>,
-            <Self::Service as Service<Dst>>::Response: Send + 'static,
-            <Self::Service as Service<Dst>>::Future: Send,
-        {
-        }
-
-        impl<C, S, I, Dst, L> SealedFallback<C, S, I, Dst> for L
-        where
-            L: Layer<Inspector<C, S, I>>,
-            L::Service: Service<Dst> + Clone + Send + 'static,
-            <L::Service as Service<Dst>>::Error: Into<BoxError>,
-            <L::Service as Service<Dst>>::Response: Send + 'static,
-            <L::Service as Service<Dst>>::Future: Send,
-        {
-        }
-
-        pub trait SealedUpgrade<S>: Layer<Inspected<S>>
-        where
-            Self::Service: Service<()> + Clone + Send + 'static,
-            <Self::Service as Service<()>>::Error: Into<BoxError>,
-            <Self::Service as Service<()>>::Response: Send + 'static,
-            <Self::Service as Service<()>>::Future: Send,
-        {
-        }
-
-        impl<S, R> SealedUpgrade<S> for R
-        where
-            R: Layer<Inspected<S>>,
-            R::Service: Service<()> + Clone + Send + 'static,
-            <R::Service as Service<()>>::Error: Into<BoxError>,
-            <R::Service as Service<()>>::Response: Send + 'static,
-            <R::Service as Service<()>>::Future: Send,
-        {
-        }
-    }
-
-    impl<C, S, I, Dst, L> FallbackLayer<C, S, I, Dst> for L
-    where
-        L: sealed::SealedFallback<C, S, I, Dst>,
-        L::Service: Service<Dst> + Clone + Send + 'static,
-        <L::Service as Service<Dst>>::Error: Into<BoxError>,
-        <L::Service as Service<Dst>>::Response: Send + 'static,
-        <L::Service as Service<Dst>>::Future: Send,
-    {
-    }
-
-    impl<S, R> UpgradeLayer<S> for R
-    where
-        R: sealed::SealedUpgrade<S>,
-        R::Service: Service<()> + Clone + Send + 'static,
-        <R::Service as Service<()>>::Error: Into<BoxError>,
-        <R::Service as Service<()>>::Response: Send + 'static,
-        <R::Service as Service<()>>::Future: Send,
-    {
-    }
 
     /// A negotiating pool over an inner make service.
     ///

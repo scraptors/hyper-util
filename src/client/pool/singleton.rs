@@ -8,6 +8,17 @@
 //! the inner service once established.
 //!
 //! This fits the HTTP/2 case well.
+//!
+//! ## Example
+//!
+//! ```rust,ignore
+//! let mut pool = Singleton::new(some_make_svc);
+//!
+//! let svc1 = pool.call(some_dst).await?;
+//!
+//! let svc2 = pool.call(some_dst).await?;
+//! // svc1 == svc2
+//! ```
 
 use std::sync::{Arc, Mutex};
 use std::task::{self, Poll};
